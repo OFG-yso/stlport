@@ -1,20 +1,20 @@
 --[[
 	Copyright (C) 2021 random-geek (https://github.com/random-geek)
 
-	This file is part of Meshport.
+	This file is part of stlport.
 
-	Meshport is free software: you can redistribute it and/or modify it under
+	stlport is free software: you can redistribute it and/or modify it under
 	the terms of the GNU Lesser General Public License as published by the Free
 	Software Foundation, either version 3 of the License, or (at your option)
 	any later version.
 
-	Meshport is distributed in the hope that it will be useful, but WITHOUT ANY
+	stlport is distributed in the hope that it will be useful, but WITHOUT ANY
 	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 	FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
 	more details.
 
 	You should have received a copy of the GNU Lesser General Public License
-	along with Meshport. If not, see <https://www.gnu.org/licenses/>.
+	along with stlport. If not, see <https://www.gnu.org/licenses/>.
 ]]
 
 
@@ -61,9 +61,9 @@ end
 -- A list of node boxes, in the format used by Luanti:
 -- {a.x, a.y, a.z, b.x, b.y, b.z}
 -- Individual boxes inside the `boxes` array are not mutated.
-meshport.Boxes = {}
+stlport.Boxes = {}
 
-function meshport.Boxes:new(boxes)
+function stlport.Boxes:new(boxes)
 	local o = {}
 
 	if type(boxes) == "table" and type(boxes[1]) == "table" then
@@ -81,17 +81,17 @@ function meshport.Boxes:new(boxes)
 	return o
 end
 
-function meshport.Boxes:insert_box(box)
+function stlport.Boxes:insert_box(box)
 	table.insert(self.boxes, box)
 end
 
-function meshport.Boxes:insert_all(boxes)
+function stlport.Boxes:insert_all(boxes)
 	for _, box in ipairs(boxes.boxes) do
 		table.insert(self.boxes, box)
 	end
 end
 
-function meshport.Boxes:transform(func)
+function stlport.Boxes:transform(func)
 	local a, b
 
 	for i, box in ipairs(self.boxes) do
@@ -102,19 +102,19 @@ function meshport.Boxes:transform(func)
 	end
 end
 
-function meshport.Boxes:rotate_by_facedir(facedir)
+function stlport.Boxes:rotate_by_facedir(facedir)
 	local a, b
 
 	for i, box in ipairs(self.boxes) do
-		a = meshport.rotate_vector_by_facedir(vector.new(box[1], box[2], box[3]), facedir)
-		b = meshport.rotate_vector_by_facedir(vector.new(box[4], box[5], box[6]), facedir)
+		a = stlport.rotate_vector_by_facedir(vector.new(box[1], box[2], box[3]), facedir)
+		b = stlport.rotate_vector_by_facedir(vector.new(box[4], box[5], box[6]), facedir)
 
 		self.boxes[i] = {a.x, a.y, a.z, b.x, b.y, b.z}
 	end
 end
 
-function meshport.Boxes:get_leveled(level)
-	local newBoxes = meshport.Boxes:new()
+function stlport.Boxes:get_leveled(level)
+	local newBoxes = stlport.Boxes:new()
 
 	for i, box in ipairs(self.boxes) do
 		local newBox = sort_box(box)
@@ -125,11 +125,11 @@ function meshport.Boxes:get_leveled(level)
 	return newBoxes
 end
 
-function meshport.Boxes:to_faces(nodeDef, pos, facedir, tileIdx, useSpecial)
+function stlport.Boxes:to_faces(nodeDef, pos, facedir, tileIdx, useSpecial)
 	local tiles = useSpecial and nodeDef.special_tiles or nodeDef.tiles
 	local vec = vector.new
 
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 
 	for _, box in ipairs(self.boxes) do
 		local b = sort_box(box)
@@ -158,9 +158,9 @@ function meshport.Boxes:to_faces(nodeDef, pos, facedir, tileIdx, useSpecial)
 		}
 
 		for i = 1, 6 do
-			local norm = meshport.NEIGHBOR_DIRS[i]
+			local norm = stlport.NEIGHBOR_DIRS[i]
 
-			faces:insert_face(meshport.prepare_cuboid_face({
+			faces:insert_face(stlport.prepare_cuboid_face({
 				verts = sideFaces[i],
 				tex_coords = sideTexCoords[i],
 				vert_norms = {norm, norm, norm, norm},
@@ -174,30 +174,30 @@ function meshport.Boxes:to_faces(nodeDef, pos, facedir, tileIdx, useSpecial)
 end
 
 
-function meshport.prepare_nodebox(nodebox)
+function stlport.prepare_nodebox(nodebox)
 	local prepNodebox = {}
 	prepNodebox.type = nodebox.type
 
 	if nodebox.type == "regular" then
-		prepNodebox.fixed = meshport.Boxes:new({-0.5, -0.5, -0.5, 0.5, 0.5, 0.5})
+		prepNodebox.fixed = stlport.Boxes:new({-0.5, -0.5, -0.5, 0.5, 0.5, 0.5})
 	elseif nodebox.type == "fixed" or nodebox.type == "leveled" then
-		prepNodebox.fixed = meshport.Boxes:new(nodebox.fixed)
+		prepNodebox.fixed = stlport.Boxes:new(nodebox.fixed)
 	elseif nodebox.type == "connected" then
-		prepNodebox.fixed = meshport.Boxes:new(nodebox.fixed)
+		prepNodebox.fixed = stlport.Boxes:new(nodebox.fixed)
 		prepNodebox.connected = {}
 		prepNodebox.disconnected = {}
 
 		for i, name in ipairs(SIDE_BOX_NAMES) do
-			prepNodebox.connected[i] = meshport.Boxes:new(nodebox["connect_" .. name])
-			prepNodebox.disconnected[i] = meshport.Boxes:new(nodebox["disconnected_" .. name])
+			prepNodebox.connected[i] = stlport.Boxes:new(nodebox["connect_" .. name])
+			prepNodebox.disconnected[i] = stlport.Boxes:new(nodebox["disconnected_" .. name])
 		end
 
-		prepNodebox.disconnected_all = meshport.Boxes:new(nodebox.disconnected)
-		prepNodebox.disconnected_sides = meshport.Boxes:new(nodebox.disconnected_sides)
+		prepNodebox.disconnected_all = stlport.Boxes:new(nodebox.disconnected)
+		prepNodebox.disconnected_sides = stlport.Boxes:new(nodebox.disconnected_sides)
 	elseif nodebox.type == "wallmounted" then
-		prepNodebox.wall_bottom = meshport.Boxes:new(nodebox.wall_bottom)
-		prepNodebox.wall_top = meshport.Boxes:new(nodebox.wall_top)
-		prepNodebox.wall_side = meshport.Boxes:new(nodebox.wall_side)
+		prepNodebox.wall_bottom = stlport.Boxes:new(nodebox.wall_bottom)
+		prepNodebox.wall_top = stlport.Boxes:new(nodebox.wall_top)
+		prepNodebox.wall_side = stlport.Boxes:new(nodebox.wall_side)
 
 		-- Rotate the boxes so they are in the correct orientation after rotation by facedir.
 		prepNodebox.wall_top:transform(function(v) return vector.new(-v.x, -v.y, v.z) end)
@@ -208,8 +208,8 @@ function meshport.prepare_nodebox(nodebox)
 end
 
 
-function meshport.collect_boxes(prepNodebox, nodeDef, param2, facedir, neighbors)
-	local boxes = meshport.Boxes:new()
+function stlport.collect_boxes(prepNodebox, nodeDef, param2, facedir, neighbors)
+	local boxes = stlport.Boxes:new()
 
 	if prepNodebox.fixed then
 		if prepNodebox.type == "leveled" then

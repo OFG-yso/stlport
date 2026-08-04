@@ -1,3 +1,21 @@
+STLport - Export Luanti (Minetest) map areas as STL files, for 3D printing
+and other uses.
+
+Copyright (C) 2026 OFG
+
+STLport is a fork of Meshport (https://github.com/random-geek/meshport),
+originally created by random-geek, whose mesh-generation work this project
+is built upon. Many thanks to random-geek for the original mod.
+
+Copyright (C) 2021 random-geek
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Lesser General Public License, either version 3
+of the License, or (at your option) any later version, as published by the
+Free Software Foundation and reproduced in full below.
+
+================================================================================
+
                    GNU LESSER GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 

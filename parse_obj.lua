@@ -1,20 +1,20 @@
 --[[
 	Copyright (C) 2021 random-geek (https://github.com/random-geek)
 
-	This file is part of Meshport.
+	This file is part of stlport.
 
-	Meshport is free software: you can redistribute it and/or modify it under
+	stlport is free software: you can redistribute it and/or modify it under
 	the terms of the GNU Lesser General Public License as published by the Free
 	Software Foundation, either version 3 of the License, or (at your option)
 	any later version.
 
-	Meshport is distributed in the hope that it will be useful, but WITHOUT ANY
+	stlport is distributed in the hope that it will be useful, but WITHOUT ANY
 	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 	FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
 	more details.
 
 	You should have received a copy of the GNU Lesser General Public License
-	along with Meshport. If not, see <https://www.gnu.org/licenses/>.
+	along with stlport. If not, see <https://www.gnu.org/licenses/>.
 ]]
 
 -- See the OBJ file specification: http://www.martinreddy.net/gfx/3d/OBJ.spec
@@ -89,10 +89,10 @@ local function handle_group(groups, elementStr)
 end
 
 
-function meshport.parse_obj(path)
+function stlport.parse_obj(path)
 	local file = io.open(path, "r")
 
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 	local elements = {
 		verts = {},
 		tex_coords = {},

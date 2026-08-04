@@ -2,32 +2,32 @@
 	Copyright (C) 2021 random-geek (https://github.com/random-geek)
 	Luanti (Minetest): Copyright (C) 2010-2021 celeron55, Perttu Ahola <celeron55@gmail.com>
 
-	This file is part of Meshport.
+	This file is part of stlport.
 
-	Meshport is free software: you can redistribute it and/or modify it under
+	stlport is free software: you can redistribute it and/or modify it under
 	the terms of the GNU Lesser General Public License as published by the Free
 	Software Foundation, either version 3 of the License, or (at your option)
 	any later version.
 
-	Meshport is distributed in the hope that it will be useful, but WITHOUT ANY
+	stlport is distributed in the hope that it will be useful, but WITHOUT ANY
 	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 	FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
 	more details.
 
 	You should have received a copy of the GNU Lesser General Public License
-	along with Meshport. If not, see <https://www.gnu.org/licenses/>.
+	along with stlport. If not, see <https://www.gnu.org/licenses/>.
 ]]
 
 -- Much of the mesh generation code in this file is derived from Luanti's (Minetest's)
 -- MapblockMeshGenerator class. See minetest/src/client/content_mapblock.cpp.
 
-local S = meshport.S
+local S = stlport.S
 local vec = vector.new -- Makes defining tables of vertices a little less painful.
 
 --[[
 	THE CUBIC NODE PRIORITY SYSTEM
 
-	For each face on each cubic node, Meshport decides whether or not to draw
+	For each face on each cubic node, stlport decides whether or not to draw
 	that face based on a combination of the current node's drawtype (show in
 	the top row of the table below), the neighboring node's drawtype (shown in
 	the leftmost column), the direction of the face, and both nodes'
@@ -72,19 +72,23 @@ local CUBIC_SIDE_FACES = {
 
 
 -- For normal, plantlike_rooted, and liquid drawtypes
-local function create_cubic_node(pos, content, param2, nodeDef, drawtype, neighbors)
-	local facedir = meshport.get_facedir(nodeDef.paramtype2, param2)
+local function create_cubic_node(pos, content, param2, nodeDef, drawtype, neighbors, atBoundary)
+	local facedir = stlport.get_facedir(nodeDef.paramtype2, param2)
 	local selfPriority = CUBIC_FACE_PRIORITY[drawtype]
 	-- If the current node is a liquid, get the flowing version of it.
 	local flowingLiquid = drawtype == "liquid"
-		and meshport.get_content_id_or_nil(nodeDef.liquid_alternative_flowing) or nil
+		and stlport.get_content_id_or_nil(nodeDef.liquid_alternative_flowing) or nil
 
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 
 	for i = 1, 6 do
 		local drawFace
 
-		if neighbors[i] == core.CONTENT_AIR then
+		if atBoundary and atBoundary[i] then
+			-- Force-close the outer shell of the exported area, regardless of
+			-- what lies just outside the selection.
+			drawFace = true
+		elseif neighbors[i] == core.CONTENT_AIR then
 			drawFace = true
 		elseif neighbors[i] == core.CONTENT_IGNORE
 				-- Don't draw faces between identical nodes
@@ -93,15 +97,15 @@ local function create_cubic_node(pos, content, param2, nodeDef, drawtype, neighb
 				or neighbors[i] == flowingLiquid then
 			drawFace = false
 		else
-			local neighborDef = meshport.get_def_from_id(neighbors[i])
-			local neighborDrawtype = meshport.get_aliased_drawtype(neighborDef.drawtype)
+			local neighborDef = stlport.get_def_from_id(neighbors[i])
+			local neighborDrawtype = stlport.get_aliased_drawtype(neighborDef.drawtype)
 			drawFace = selfPriority > (CUBIC_FACE_PRIORITY[neighborDrawtype] or 0)
 		end
 
 		if drawFace then
-			local norm = meshport.NEIGHBOR_DIRS[i]
+			local norm = stlport.NEIGHBOR_DIRS[i]
 
-			faces:insert_face(meshport.prepare_cuboid_face({
+			faces:insert_face(stlport.prepare_cuboid_face({
 				verts = table.copy(CUBIC_SIDE_FACES[i]),
 				vert_norms = {norm, norm, norm, norm},
 				tex_coords = {{x = 0, y = 0}, {x = 1, y = 0}, {x = 1, y = 1}, {x = 0, y = 1}},
@@ -114,24 +118,27 @@ end
 
 
 -- For allfaces and glasslike drawtypes, and equivalent variants.
-local function create_special_cubic_node(pos, content, nodeDef, drawtype, neighbors)
+local function create_special_cubic_node(pos, content, nodeDef, drawtype, neighbors, atBoundary)
 	local selfPriority = CUBIC_FACE_PRIORITY[drawtype]
 	local isAllfaces = drawtype == "allfaces"
 	local allfacesScale = isAllfaces and nodeDef.visual_scale or 1
 
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 
 	for i = 1, 6 do
 		local drawFace
 		local inset = false
 
-		if allfacesScale ~= 1 or neighbors[i] == core.CONTENT_AIR or neighbors[i] == core.CONTENT_IGNORE then
+		if atBoundary and atBoundary[i] then
+			-- Force-close the outer shell of the exported area.
+			drawFace = true
+		elseif allfacesScale ~= 1 or neighbors[i] == core.CONTENT_AIR or neighbors[i] == core.CONTENT_IGNORE then
 			drawFace = true
 		elseif neighbors[i] == content then
 			drawFace = isAllfaces and i % 2 == 1
 		else
-			local neighborDef = meshport.get_def_from_id(neighbors[i])
-			local neighborDrawtype = meshport.get_aliased_drawtype(neighborDef.drawtype)
+			local neighborDef = stlport.get_def_from_id(neighbors[i])
+			local neighborDrawtype = stlport.get_aliased_drawtype(neighborDef.drawtype)
 			local neighborPriority = CUBIC_FACE_PRIORITY[neighborDrawtype] or 0
 
 			if neighborPriority < selfPriority then
@@ -154,14 +161,14 @@ local function create_special_cubic_node(pos, content, nodeDef, drawtype, neighb
 			local verts = table.copy(CUBIC_SIDE_FACES[i])
 
 			if inset then
-				local offset = vector.multiply(meshport.NEIGHBOR_DIRS[i], -0.003)
+				local offset = vector.multiply(stlport.NEIGHBOR_DIRS[i], -0.003)
 				for j, vert in ipairs(verts) do
 					verts[j] = vector.add(vert, offset)
 				end
 			end
 
-			local norm = meshport.NEIGHBOR_DIRS[i]
-			faces:insert_face(meshport.prepare_cuboid_face({
+			local norm = stlport.NEIGHBOR_DIRS[i]
+			faces:insert_face(stlport.prepare_cuboid_face({
 				verts = verts,
 				vert_norms = {norm, norm, norm, norm},
 				tex_coords = {{x = 0, y = 0}, {x = 1, y = 0}, {x = 1, y = 1}, {x = 0, y = 1}},
@@ -233,7 +240,7 @@ local function create_glasslike_framed_node(pos, param2, nodeDef, area, vContent
 
 	if hMerge or vMerge then
 		for i = 1, 18 do
-			local dir = meshport.NEIGHBOR_DIRS[i]
+			local dir = stlport.NEIGHBOR_DIRS[i]
 			if (hMerge or (dir.x == 0 and dir.z == 0)) and (vMerge or dir.y == 0) then
 				local nIdx = area:indexp(vector.add(pos, dir))
 				neighbors[i] = vContent[nIdx] == vContent[idx]
@@ -241,7 +248,7 @@ local function create_glasslike_framed_node(pos, param2, nodeDef, area, vContent
 		end
 	end
 
-	local boxes = meshport.Boxes:new()
+	local boxes = stlport.Boxes:new()
 
 	for i = 1, 12 do
 		local edgeVisible
@@ -262,7 +269,7 @@ local function create_glasslike_framed_node(pos, param2, nodeDef, area, vContent
 
 	for i = 1, 6 do
 		if not neighbors[i] then
-			local norm = meshport.NEIGHBOR_DIRS[i]
+			local norm = stlport.NEIGHBOR_DIRS[i]
 
 			faces:insert_face({
 				verts = table.copy(GLASS_FACES[i]),
@@ -275,7 +282,7 @@ local function create_glasslike_framed_node(pos, param2, nodeDef, area, vContent
 
 	if intLevel > 0 and nodeDef.special_tiles and nodeDef.special_tiles[1] then
 		local level = intLevel / 63 * 2 - 1
-		local liquidBoxes = meshport.Boxes:new()
+		local liquidBoxes = stlport.Boxes:new()
 		liquidBoxes:insert_box({
 			-(neighbors[4] and G or B),
 			-(neighbors[2] and G or B),
@@ -303,9 +310,9 @@ local FLOWING_LIQUID_CONSTANTS = {
 
 
 local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
-	local cSource = meshport.get_content_id_or_nil(nodeDef.liquid_alternative_source)
-	local cFlowing = meshport.get_content_id_or_nil(nodeDef.liquid_alternative_flowing)
-	local range = math.min(math.max(meshport.get_def_from_id(cFlowing).liquid_range or 8, 1), 8)
+	local cSource = stlport.get_content_id_or_nil(nodeDef.liquid_alternative_source)
+	local cFlowing = stlport.get_content_id_or_nil(nodeDef.liquid_alternative_flowing)
+	local range = math.min(math.max(stlport.get_def_from_id(cFlowing).liquid_range or 8, 1), 8)
 
 	--[[ Step 1: Gather neighbor data ]]
 	local neighbors = {[-1] = {}, [0] = {}, [1] = {}}
@@ -383,7 +390,7 @@ local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
 	end
 
 	--[[ Step 3: Actually create the liquid mesh ]]
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 
 	-- Localize constants
 	local SIDE_DIRS, SIDE_CORNERS = (function(c)
@@ -406,7 +413,7 @@ local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
 		end
 
 		local nContent = neighbors[dir.z][dir.x].content
-		local drawtype = meshport.get_aliased_drawtype(meshport.get_def_from_id(nContent).drawtype)
+		local drawtype = stlport.get_aliased_drawtype(stlport.get_def_from_id(nContent).drawtype)
 		if (CUBIC_FACE_PRIORITY[drawtype] or 0) >= 4 then
 			return false -- Don't draw bordering normal nodes
 		end
@@ -479,8 +486,8 @@ local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
 		faces:insert_face({
 			verts = {verts[1], verts[2], verts[3]},
 			vert_norms = {norm1, norm1, norm1},
-			tex_coords = meshport.translate_texture_coordinates(
-				meshport.rotate_texture_coordinates_rad(
+			tex_coords = stlport.translate_texture_coordinates(
+				stlport.rotate_texture_coordinates_rad(
 					{{x = 0, y = 0}, {x = 1, y = 0}, {x = 1, y = 1}},
 					textureAngle
 				),
@@ -492,8 +499,8 @@ local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
 		faces:insert_face({
 			verts = {verts[3], verts[4], verts[1]},
 			vert_norms = {norm2, norm2, norm2},
-			tex_coords = meshport.translate_texture_coordinates(
-				meshport.rotate_texture_coordinates_rad(
+			tex_coords = stlport.translate_texture_coordinates(
+				stlport.rotate_texture_coordinates_rad(
 					{{x = 1, y = 1}, {x = 0, y = 1}, {x = 0, y = 0}},
 					textureAngle
 				),
@@ -511,7 +518,7 @@ local function create_flowing_liquid_node(pos, nodeDef, area, vContent, vParam2)
 			return false
 		end
 
-		local drawtype = meshport.get_aliased_drawtype(meshport.get_def_from_id(bContent).drawtype)
+		local drawtype = stlport.get_aliased_drawtype(stlport.get_def_from_id(bContent).drawtype)
 		if (CUBIC_FACE_PRIORITY[drawtype] or 0) >= 4 then
 			return false -- Don't draw bordering normal nodes
 		end
@@ -544,14 +551,14 @@ local function create_nodebox_node(pos, content, param2, neighbors)
 	local nodeName = core.get_name_from_content_id(content)
 	local nodeDef = core.registered_nodes[nodeName]
 
-	if not meshport.nodebox_cache[nodeName] then
-		meshport.nodebox_cache[nodeName] = meshport.prepare_nodebox(nodeDef.node_box)
+	if not stlport.nodebox_cache[nodeName] then
+		stlport.nodebox_cache[nodeName] = stlport.prepare_nodebox(nodeDef.node_box)
 	end
 
-	local facedir = meshport.get_facedir(nodeDef.paramtype2, param2)
-	local boxes = meshport.collect_boxes(meshport.nodebox_cache[nodeName], nodeDef, param2, facedir, neighbors)
+	local facedir = stlport.get_facedir(nodeDef.paramtype2, param2)
+	local boxes = stlport.collect_boxes(stlport.nodebox_cache[nodeName], nodeDef, param2, facedir, neighbors)
 
-	if meshport.nodebox_cache[nodeName].type ~= "connected" then
+	if stlport.nodebox_cache[nodeName].type ~= "connected" then
 		boxes:rotate_by_facedir(facedir)
 	end
 
@@ -566,35 +573,35 @@ local function create_mesh_node(nodeDef, param2, playerName)
 		return
 	end
 
-	if not meshport.mesh_cache[meshName] then
+	if not stlport.mesh_cache[meshName] then
 		-- Get the paths of all .obj meshes.
-		if not meshport.obj_paths then
-			meshport.obj_paths = meshport.get_obj_paths()
+		if not stlport.obj_paths then
+			stlport.obj_paths = stlport.get_obj_paths()
 		end
 
-		if not meshport.obj_paths[meshName] then
+		if not stlport.obj_paths[meshName] then
 			if string.lower(string.sub(meshName, -4)) ~= ".obj" then
-				meshport.log(playerName, "warning", S("Mesh \"@1\" is not supported.", meshName))
+				stlport.log(playerName, "warning", S("Mesh \"@1\" is not supported.", meshName))
 			else
-				meshport.log(playerName, "warning", S("Mesh \"@1\" could not be found.", meshName))
+				stlport.log(playerName, "warning", S("Mesh \"@1\" could not be found.", meshName))
 			end
 
 			-- Cache a blank faces object so the player isn't warned again.
-			meshport.mesh_cache[meshName] = meshport.Faces:new()
+			stlport.mesh_cache[meshName] = stlport.Faces:new()
 		else
 			-- TODO: pcall this in case of failure
-			local meshFaces = meshport.parse_obj(meshport.obj_paths[meshName])
+			local meshFaces = stlport.parse_obj(stlport.obj_paths[meshName])
 			meshFaces:scale(nodeDef.visual_scale)
-			meshport.mesh_cache[meshName] = meshFaces
+			stlport.mesh_cache[meshName] = meshFaces
 		end
 	end
 
-	local faces = meshport.mesh_cache[meshName]:copy()
+	local faces = stlport.mesh_cache[meshName]:copy()
 
-	local facedir = meshport.get_facedir(nodeDef.paramtype2, param2)
+	local facedir = stlport.get_facedir(nodeDef.paramtype2, param2)
 	faces:rotate_by_facedir(facedir)
 
-	local rotation = meshport.get_degrotate(nodeDef.paramtype2, param2)
+	local rotation = stlport.get_degrotate(nodeDef.paramtype2, param2)
 	faces:rotate_xz_degrees(rotation)
 
 	return faces
@@ -610,12 +617,12 @@ local function create_plantlike_node(pos, param2, nodeDef)
 	local style = 0
 	local height = 1.0
 	local scale = 0.5 * nodeDef.visual_scale
-	local rotation = meshport.get_degrotate(nodeDef.paramtype2, param2)
+	local rotation = stlport.get_degrotate(nodeDef.paramtype2, param2)
 	local offset = vector.new(0, 0, 0)
 	local randomOffsetY = false
 	local faceNum = 0
 
-	local faces = meshport.Faces:new()
+	local faces = stlport.Faces:new()
 
 	if isRooted then
 		-- Place plant above the center node.
@@ -651,7 +658,7 @@ local function create_plantlike_node(pos, param2, nodeDef)
 
 	local function create_plantlike_quad(faceRotation, topOffset, bottomOffset)
 		-- Use Faces, even though it's just one face.
-		local face = meshport.Faces:new()
+		local face = stlport.Faces:new()
 		local plantHeight = 2.0 * scale * height
 		local norm = vector.normalize(vector.new(0, bottomOffset - topOffset, plantHeight))
 
@@ -713,28 +720,52 @@ local function create_plantlike_node(pos, param2, nodeDef)
 end
 
 
-local function create_node(idx, area, vContent, vParam2, playerName)
+-- Returns true if `pos` lies outside the selected export area [p1, p2].
+local function is_outside_area(pos, p1, p2)
+	return pos.x < p1.x or pos.x > p2.x
+		or pos.y < p1.y or pos.y > p2.y
+		or pos.z < p1.z or pos.z > p2.z
+end
+
+
+-- For each of the 6 face directions, returns whether the neighboring position
+-- lies outside the selected export area. Used to force-close the outer shell
+-- of the export, even where the real neighboring node (just outside the
+-- selection) would normally hide the face.
+local function get_boundary_faces(pos, p1, p2)
+	local atBoundary = {}
+
+	for i = 1, 6 do
+		atBoundary[i] = is_outside_area(vector.add(pos, stlport.NEIGHBOR_DIRS[i]), p1, p2)
+	end
+
+	return atBoundary
+end
+
+
+local function create_node(idx, area, vContent, vParam2, playerName, p1, p2)
 	if vContent[idx] == core.CONTENT_AIR
 			or vContent[idx] == core.CONTENT_IGNORE
 			or vContent[idx] == core.CONTENT_UNKNOWN then -- TODO: Export unknown nodes?
 		return
 	end
 
-	local nodeDef = meshport.get_def_from_id(vContent[idx])
+	local nodeDef = stlport.get_def_from_id(vContent[idx])
 	if nodeDef.drawtype == "airlike" then
 		return
 	end
 
 	local pos = area:position(idx)
-	local nodeDrawtype = meshport.get_aliased_drawtype(nodeDef.drawtype)
+	local nodeDrawtype = stlport.get_aliased_drawtype(nodeDef.drawtype)
 	local neighbors, faces
 
 	if CUBIC_FACE_PRIORITY[nodeDrawtype] or nodeDrawtype == "nodebox" then
-		neighbors = meshport.get_node_neighbors(vContent, area, idx)
+		neighbors = stlport.get_node_neighbors(vContent, area, idx)
 	end
 
 	if (CUBIC_FACE_PRIORITY[nodeDrawtype] or 0) >= 3 then -- liquid, normal, plantlike_rooted
-		faces = create_cubic_node(pos, vContent[idx], vParam2[idx], nodeDef, nodeDrawtype, neighbors)
+		local atBoundary = get_boundary_faces(pos, p1, p2)
+		faces = create_cubic_node(pos, vContent[idx], vParam2[idx], nodeDef, nodeDrawtype, neighbors, atBoundary)
 
 		if nodeDrawtype == "plantlike_rooted" then
 			local plantPos = vector.add(pos, vector.new(0, 1, 0))
@@ -742,7 +773,8 @@ local function create_node(idx, area, vContent, vParam2, playerName)
 			faces:insert_all(plantFaces)
 		end
 	elseif CUBIC_FACE_PRIORITY[nodeDrawtype] then -- Any other cubic nodes (allfaces, glasslike)
-		faces = create_special_cubic_node(pos, vContent[idx], nodeDef, nodeDrawtype, neighbors)
+		local atBoundary = get_boundary_faces(pos, p1, p2)
+		faces = create_special_cubic_node(pos, vContent[idx], nodeDef, nodeDrawtype, neighbors, atBoundary)
 	elseif nodeDrawtype == "glasslike_framed" then
 		faces = create_glasslike_framed_node(pos, vParam2[idx], nodeDef, area, vContent)
 	elseif nodeDrawtype == "flowingliquid" then
@@ -765,25 +797,25 @@ end
 
 
 local function initialize_resources()
-	meshport.texture_paths = meshport.get_texture_paths()
-	meshport.texture_dimension_cache = {}
-	-- meshport.obj_paths is only loaded if needed
-	meshport.nodebox_cache = {}
-	meshport.mesh_cache = {}
+	stlport.texture_paths = stlport.get_texture_paths()
+	stlport.texture_dimension_cache = {}
+	-- stlport.obj_paths is only loaded if needed
+	stlport.nodebox_cache = {}
+	stlport.mesh_cache = {}
 end
 
 
 local function cleanup_resources()
-	meshport.texture_paths = nil
-	meshport.texture_dimension_cache = nil
-	meshport.obj_paths = nil
-	meshport.nodebox_cache = nil
-	meshport.mesh_cache = nil
+	stlport.texture_paths = nil
+	stlport.texture_dimension_cache = nil
+	stlport.obj_paths = nil
+	stlport.nodebox_cache = nil
+	stlport.mesh_cache = nil
 end
 
 
-function meshport.create_mesh(playerName, p1, p2, path)
-	meshport.log(playerName, "info", S("Generating mesh..."))
+function stlport.create_mesh(playerName, p1, p2, path)
+	stlport.log(playerName, "info", S("Generating mesh..."))
 	initialize_resources()
 
 	p1, p2 = vector.sort(p1, p2)
@@ -797,12 +829,12 @@ function meshport.create_mesh(playerName, p1, p2, path)
 	-- Create a VoxelArea for converting from flat array indices to position vectors.
 	local vArea = VoxelArea:new{MinEdge = vp1, MaxEdge = vp2}
 	local meshOrigin = vector.subtract(p1, 0.5)
-	local mesh = meshport.Mesh:new()
+	local mesh = stlport.Mesh:new()
 
 	-- Loop through all positions in the desired area.
 	for idx in vArea:iterp(p1, p2) do
 		-- Generate a mesh for the node.
-		local faces = create_node(idx, vArea, vContent, vParam2, playerName)
+		local faces = create_node(idx, vArea, vContent, vParam2, playerName, p1, p2)
 
 		if faces then
 			-- Move the node to its proper position.
@@ -813,10 +845,8 @@ function meshport.create_mesh(playerName, p1, p2, path)
 		end
 	end
 
-	core.mkdir(path)
-	mesh:write_obj(path)
-	mesh:write_mtl(path, playerName)
+	mesh:write_stl(path)
 
 	cleanup_resources()
-	meshport.log(playerName, "info", S("Finished. Saved to @1", path))
+	stlport.log(playerName, "info", S("Finished. Saved to @1", path))
 end

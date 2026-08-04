@@ -1,48 +1,48 @@
 --[[
 	Copyright (C) 2021 random-geek (https://github.com/random-geek)
 
-	This file is part of Meshport.
+	This file is part of stlport.
 
-	Meshport is free software: you can redistribute it and/or modify it under
+	stlport is free software: you can redistribute it and/or modify it under
 	the terms of the GNU Lesser General Public License as published by the Free
 	Software Foundation, either version 3 of the License, or (at your option)
 	any later version.
 
-	Meshport is distributed in the hope that it will be useful, but WITHOUT ANY
+	stlport is distributed in the hope that it will be useful, but WITHOUT ANY
 	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 	FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
 	more details.
 
 	You should have received a copy of the GNU Lesser General Public License
-	along with Meshport. If not, see <https://www.gnu.org/licenses/>.
+	along with stlport. If not, see <https://www.gnu.org/licenses/>.
 ]]
 
-meshport = {
+stlport = {
 	player_data = {},
-	S = core.get_translator("meshport"),
+	S = core.get_translator("stlport"),
 }
 
-modpath = core.get_modpath("meshport")
+modpath = core.get_modpath("stlport")
 dofile(modpath .. "/utils.lua")
 dofile(modpath .. "/mesh.lua")
 dofile(modpath .. "/parse_obj.lua")
 dofile(modpath .. "/nodebox.lua")
 dofile(modpath .. "/export.lua")
 
-local S = meshport.S
+local S = stlport.S
 local vec = vector.new
 
-core.register_privilege("meshport", S("Can save meshes with Meshport."))
+core.register_privilege("stlport", S("Can save meshes with stlport."))
 
 core.register_on_leaveplayer(function(player, timed_out)
 	local name = player:get_player_name()
-	meshport.player_data[name] = nil
+	stlport.player_data[name] = nil
 end)
 
 for n = 1, 2 do
-	local tex = "meshport_corner_" .. n .. ".png"
+	local tex = "stlport_corner_" .. n .. ".png"
 
-	core.register_entity("meshport:corner_" .. n, {
+	core.register_entity("stlport:corner_" .. n, {
 		initial_properties = {
 			physical = false,
 			visual = "cube",
@@ -59,13 +59,13 @@ for n = 1, 2 do
 	})
 end
 
-core.register_entity("meshport:border", {
+core.register_entity("stlport:border", {
 	initial_properties = {
 		physical = false,
 		visual = "upright_sprite",
 		textures = {
-			"meshport_border.png",
-			"meshport_border.png^[transformFX",
+			"stlport_border.png",
+			"stlport_border.png^[transformFX",
 		},
 		static_save = false,
 		glow = core.LIGHT_MAX,
@@ -81,7 +81,7 @@ core.register_entity("meshport:border", {
 			return
 		end
 
-		local borders = meshport.player_data[playerName].borders
+		local borders = stlport.player_data[playerName].borders
 		for i = 1, 6 do -- Remove all borders at once.
 			if borders[i] then
 				borders[i]:remove()
@@ -137,7 +137,7 @@ local function mark_borders(playerData)
 	}
 
 	for i = 1, 6 do
-		local entity = core.add_entity(sideCenters[i], "meshport:border")
+		local entity = core.add_entity(sideCenters[i], "stlport:border")
 		entity:set_properties({
 			visual_size = sideSizes[i],
 			selectionbox = selectionBoxes[i],
@@ -149,22 +149,22 @@ end
 
 
 local function set_position(playerName, n, pos)
-	if not meshport.player_data[playerName] then
-		meshport.player_data[playerName] = {
+	if not stlport.player_data[playerName] then
+		stlport.player_data[playerName] = {
 			pos = {},
 			corners = {},
 			borders = {},
 		}
 	end
 
-	local data = meshport.player_data[playerName]
+	local data = stlport.player_data[playerName]
 	data.pos[n] = pos
 
 	if data.corners[n] then
 		data.corners[n]:remove()
 	end
 
-	data.corners[n] = core.add_entity(pos, "meshport:corner_" .. n)
+	data.corners[n] = core.add_entity(pos, "stlport:corner_" .. n)
 
 	for i = 1, 6 do
 		if data.borders[i] then
@@ -177,16 +177,16 @@ local function set_position(playerName, n, pos)
 		mark_borders(data)
 	end
 
-	meshport.log(playerName, "info", S("Position @1 set to @2.", n, core.pos_to_string(pos)))
+	stlport.log(playerName, "info", S("Position @1 set to @2.", n, core.pos_to_string(pos)))
 end
 
 
 for n = 1, 2 do
-	core.register_chatcommand("mesh" .. n, {
+	core.register_chatcommand("stl" .. n, {
 		params = "[pos]",
 		description = S(
-			"Set position @1 for Meshport. Player's position is used if no other position is specified.", n),
-		privs = {meshport = true},
+			"Set position @1 for stlport. Player's position is used if no other position is specified.", n),
+		privs = {stlport = true},
 
 		func = function(playerName, param)
 			local pos
@@ -198,7 +198,7 @@ for n = 1, 2 do
 			end
 
 			if not pos then
-				meshport.log(playerName, "error", S("Not a valid position."))
+				stlport.log(playerName, "error", S("Not a valid position."))
 				return
 			end
 
@@ -216,8 +216,8 @@ local function on_wand_click(itemstack, player, pointedThing, n)
 
 	local playerName = player:get_player_name()
 
-	if not core.check_player_privs(playerName, "meshport") then
-		meshport.log(playerName, "error", S("You must have the meshport privilege to use this tool."))
+	if not core.check_player_privs(playerName, "stlport") then
+		stlport.log(playerName, "error", S("You must have the stlport privilege to use this tool."))
 		return
 	end
 
@@ -230,7 +230,7 @@ local function on_wand_click(itemstack, player, pointedThing, n)
 		end
 	elseif pointedThing.type == "object" then
 		local entity = pointedThing.ref:get_luaentity()
-		if entity.name == "meshport:border" then
+		if entity.name == "stlport:border" then
 			return
 		end
 
@@ -243,10 +243,10 @@ local function on_wand_click(itemstack, player, pointedThing, n)
 end
 
 
-core.register_tool("meshport:wand", {
-	description = S("Meshport Area Selector\nLeft-click to set 1st corner, right-click to set 2nd corner."),
-	short_description = S("Meshport Area Selector"),
-	inventory_image = "meshport_wand.png",
+core.register_tool("stlport:wand", {
+	description = S("stlport Area Selector\nLeft-click to set 1st corner, right-click to set 2nd corner."),
+	short_description = S("stlport Area Selector"),
+	inventory_image = "stlport_wand.png",
 
 	on_use = function(itemstack, placer, pointedThing) -- Left-click
 		on_wand_click(itemstack, placer, pointedThing, 1)
@@ -263,11 +263,11 @@ core.register_tool("meshport:wand", {
 })
 
 core.register_chatcommand("meshrst", {
-	description = S("Clear the current Meshport area."),
-	privs = {meshport = true},
+	description = S("Clear the current stlport area."),
+	privs = {stlport = true},
 
 	func = function(playerName, param)
-		local data = meshport.player_data[playerName]
+		local data = stlport.player_data[playerName]
 		if data then
 			for n = 1, 2 do
 				data.pos[n] = nil
@@ -285,42 +285,60 @@ core.register_chatcommand("meshrst", {
 			end
 		end
 
-		meshport.log(playerName, "info", S("Cleared the current area."))
+		stlport.log(playerName, "info", S("Cleared the current area."))
 	end,
 })
 
-core.register_chatcommand("meshport", {
+-- Finds a free filename in `dirPath` for `baseName .. ext`, appending
+-- " (2)", " (3)", etc. if a file with that name already exists.
+local function get_available_filename(dirPath, baseName, ext)
+	local existingFiles = core.get_dir_list(dirPath, false)
+	local fileName = baseName .. ext
+
+	if table.indexof(existingFiles, fileName) < 0 then
+		return fileName
+	end
+
+	local n = 2
+	while true do
+		fileName = string.format("%s (%d)%s", baseName, n, ext)
+		if table.indexof(existingFiles, fileName) < 0 then
+			return fileName
+		end
+		n = n + 1
+	end
+end
+
+
+core.register_chatcommand("stlport", {
 	params = "[filename]",
 	description = S("Save a mesh of the selected area (filename optional)."),
-	privs = {meshport = true},
+	privs = {stlport = true},
 
 	func = function(playerName, filename)
-		local playerData = meshport.player_data[playerName] or {}
+		local playerData = stlport.player_data[playerName] or {}
 
 		if not (playerData.pos and playerData.pos[1] and playerData.pos[2]) then
-			meshport.log(playerName, "error",
-				S("No area selected. Use the Meshport Area Selector or /mesh1 and /mesh2 to select an area."))
+			stlport.log(playerName, "error",
+				S("No area selected. Use the stlport Area Selector or /stl1 and /stl2 to select an area."))
 			return
 		end
 
 		if filename:find("[^%w-_]") then
-			meshport.log(playerName, "error",
+			stlport.log(playerName, "error",
 				S("Invalid name supplied. Please use valid characters: [A-Z][a-z][0-9][-_]"))
 			return
 		elseif filename == "" then
 			filename = os.date("%Y-%m-%d_%H-%M-%S")
 		end
 
-		local mpPath = core.get_worldpath() .. "/" .. "meshport"
-		local folderName = playerName .. "_" .. filename
+		local mpPath = core.get_worldpath() .. "/" .. "stlport"
+		core.mkdir(mpPath)
 
-		if table.indexof(core.get_dir_list(mpPath, true), folderName) > 0 then
-			meshport.log(playerName, "error",
-				S("Folder \"@1\" already exists. Try using a different name.", folderName))
-			return
-		end
+		local baseName = playerName .. "_" .. filename
+		local fileName = get_available_filename(mpPath, baseName, ".stl")
 
-		local path = mpPath .. "/" .. folderName
-		meshport.create_mesh(playerName, playerData.pos[1], playerData.pos[2], path)
+		local path = mpPath .. "/" .. fileName
+		stlport.create_mesh(playerName, playerData.pos[1], playerData.pos[2], path)
 	end,
 })

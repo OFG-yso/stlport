@@ -1,25 +1,25 @@
 --[[
 	Copyright (C) 2021 random-geek (https://github.com/random-geek)
 
-	This file is part of Meshport.
+	This file is part of stlport.
 
-	Meshport is free software: you can redistribute it and/or modify it under
+	stlport is free software: you can redistribute it and/or modify it under
 	the terms of the GNU Lesser General Public License as published by the Free
 	Software Foundation, either version 3 of the License, or (at your option)
 	any later version.
 
-	Meshport is distributed in the hope that it will be useful, but WITHOUT ANY
+	stlport is distributed in the hope that it will be useful, but WITHOUT ANY
 	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 	FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
 	more details.
 
 	You should have received a copy of the GNU Lesser General Public License
-	along with Meshport. If not, see <https://www.gnu.org/licenses/>.
+	along with stlport. If not, see <https://www.gnu.org/licenses/>.
 ]]
 
-local S = meshport.S
+local S = stlport.S
 
-meshport.NEIGHBOR_DIRS = {
+stlport.NEIGHBOR_DIRS = {
 	-- face neighbors
 	vector.new( 0, 1, 0), -- 1
 	vector.new( 0,-1, 0),
@@ -107,7 +107,7 @@ local DRAWTYPE_ALIASES = {
 }
 
 
-function meshport.log(name, level, s)
+function stlport.log(name, level, s)
 	local message
 
 	if level == "info" then
@@ -118,11 +118,11 @@ function meshport.log(name, level, s)
 		message = core.colorize("#EF0000", S("Error: @1", s))
 	end
 
-	core.chat_send_player(name, "[meshport] " .. message)
+	core.chat_send_player(name, "[stlport] " .. message)
 end
 
 
-function meshport.rotate_vector_by_facedir(vec, facedir)
+function stlport.rotate_vector_by_facedir(vec, facedir)
 	local v = vector.new(vec)
 	local rotY = facedir % 4
 	local rotSide = (facedir - rotY) / 4
@@ -152,7 +152,7 @@ function meshport.rotate_vector_by_facedir(vec, facedir)
 end
 
 
-function meshport.translate_texture_coordinates(texCoords, offset)
+function stlport.translate_texture_coordinates(texCoords, offset)
 	if offset.x == 0 and offset.y == 0 then
 		return texCoords
 	end
@@ -167,7 +167,7 @@ function meshport.translate_texture_coordinates(texCoords, offset)
 end
 
 
-function meshport.rotate_texture_coordinates_rad(texCoords, rad)
+function stlport.rotate_texture_coordinates_rad(texCoords, rad)
 	if rad == 0 then
 		return texCoords
 	end
@@ -248,10 +248,10 @@ end
 
 -- WARNING: This function mutates tables!
 -- Please follow the table rules used by Faces.
-function meshport.prepare_cuboid_face(face, tiles, pos, facedir, sideIdx)
+function stlport.prepare_cuboid_face(face, tiles, pos, facedir, sideIdx)
 	-- If the tile index has not been set manually, assign a tile to the face based on the facedir value.
 	face.tile_idx = face.tile_idx or FACEDIR_TO_TILE_INDICES[facedir][sideIdx]
-	local tile = meshport.get_tile(tiles, face.tile_idx)
+	local tile = stlport.get_tile(tiles, face.tile_idx)
 
 	if tile.align_style == "world" or tile.align_style == "user" then
 		-- For scaled, world-aligned tiles, scale and reposition the texture coordinates as needed.
@@ -267,24 +267,24 @@ function meshport.prepare_cuboid_face(face, tiles, pos, facedir, sideIdx)
 end
 
 
-function meshport.get_content_id_or_nil(nodeName)
+function stlport.get_content_id_or_nil(nodeName)
 	if core.registered_nodes[nodeName] then
 		return core.get_content_id(nodeName)
 	end
 end
 
 
-function meshport.get_def_from_id(contentId)
+function stlport.get_def_from_id(contentId)
 	return core.registered_nodes[core.get_name_from_content_id(contentId)] or {}
 end
 
 
-function meshport.get_aliased_drawtype(drawtype)
+function stlport.get_aliased_drawtype(drawtype)
 	return DRAWTYPE_ALIASES[drawtype or ""] or drawtype
 end
 
 
-function meshport.get_facedir(type, param2)
+function stlport.get_facedir(type, param2)
 	if type == "facedir" or type == "colorfacedir" then
 		-- For colorfacedir, only the first 5 bits are needed.
 		return param2 % 32
@@ -297,7 +297,7 @@ function meshport.get_facedir(type, param2)
 end
 
 
-function meshport.get_degrotate(type, param2)
+function stlport.get_degrotate(type, param2)
 	if type == "degrotate" then
 		return 1.5 * (param2 % 240)
 	elseif type == "colordegrotate" then
@@ -308,21 +308,21 @@ function meshport.get_degrotate(type, param2)
 end
 
 
-function meshport.get_node_neighbors(array, area, idx)
+function stlport.get_node_neighbors(array, area, idx)
 	-- Get the node's absolute position from the flat array index.
 	local pos = area:position(idx)
 	local neighbors = {}
 
 	-- Get the content/param2 value for each neighboring node.
 	for i = 1, 6 do
-		neighbors[i] = array[area:indexp(vector.add(pos, meshport.NEIGHBOR_DIRS[i]))]
+		neighbors[i] = array[area:indexp(vector.add(pos, stlport.NEIGHBOR_DIRS[i]))]
 	end
 
 	return neighbors
 end
 
 
-function meshport.get_tile(tiles, n)
+function stlport.get_tile(tiles, n)
 	if type(tiles) == "table" and #tiles > 0 then
 		return tiles[n] or tiles[#tiles]
 	else
@@ -359,16 +359,16 @@ end
 
 
 -- In case of failure, this should return nil, nil
-function meshport.get_texture_dimensions(textureName)
-	local dims = meshport.texture_dimension_cache[textureName]
+function stlport.get_texture_dimensions(textureName)
+	local dims = stlport.texture_dimension_cache[textureName]
 	if dims then
 		return dims[1], dims[2]
 	end
 
-	local path = meshport.texture_paths[textureName]
+	local path = stlport.texture_paths[textureName]
 	if path then
 		local w, h = get_png_dimensions(path)
-		meshport.texture_dimension_cache[path] = {w, h} -- Will be an empty table if the file isn't found.
+		stlport.texture_dimension_cache[path] = {w, h} -- Will be an empty table if the file isn't found.
 		return w, h
 	end
 end
@@ -385,7 +385,7 @@ local function add_asset_paths_from_folder(assetPaths, path, extension)
 end
 
 
-function meshport.get_texture_paths()
+function stlport.get_texture_paths()
 	local texturePaths = {}
 
 	-- Iterate through each enabled mod.
@@ -404,7 +404,7 @@ function meshport.get_texture_paths()
 end
 
 
-function meshport.get_obj_paths()
+function stlport.get_obj_paths()
 	local objPaths = {}
 
 	-- Iterate through each enabled mod.
