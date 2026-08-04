@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-LGPLv3.0%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
+![screenshot](screenshot2.png)
 
 STLport is a mod which allows easy exporting of scenes from Luanti (Minetest)
 to `.stl` files. These models can be imported directly into Blender, a
